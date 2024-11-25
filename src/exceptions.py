@@ -1,8 +1,4 @@
-class AlreadyInStockException(Exception):
-    ...
-
-
-class AlreadyOutOfStockException(Exception):
+class InvalidStatusException(Exception):
     ...
 
 

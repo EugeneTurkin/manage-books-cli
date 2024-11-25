@@ -14,25 +14,32 @@ def main(
     args = parse_args()
 
     if action == Action.ADD.value:
-        book = Book(args.title, args.year, args.author)
-        book.add(storage)
+        book = Book.create_object(args.title, args.year, args.author)
+        book.load(storage)
 
         if args.print:
             print(f"Added book: {book.title}, {book.year} by {book.author}")
 
     if action == Action.DELETE.value:
-        Book.delete(args.id)
+        book = Book.get_by_id(storage, args.id)
+        book.delete(storage)
+
+        if args.print:
+            print(f"Deleted book: {book.title}, {book.year} by {book.author}")
 
     if action == Action.SEARCH.value:
-        return Book.search(args)
+        # return Book.search(args)
+        print([vars(args)])
 
     if action == Action.LIST.value:
-        Book.print_all()
+        Book.print_all(storage)
 
     if action == Action.STATUS.value:
-        Book.change_status(args)
+        book = Book.get_by_id(storage, args.id)
+        book.change_status(storage, args.status)
 
-    return vars(args)
+        if args.print:
+            print(f"Book: {book.title}, {book.year} by {book.author}. Status changed to {book.status}")
 
 
 if __name__ == "__main__":

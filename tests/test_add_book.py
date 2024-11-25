@@ -1,42 +1,46 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 from pathlib import Path
+import re
 import unittest
 from unittest.mock import patch
 
 from books import main 
-from src.config import config
 from src.exceptions import BookAlreadyExistsException, CollisionException
 from src.models import Book
-
-
-test_book = Book(title="test title", year=1976, author="test author", id="test")
-test_storage_path = Path(__file__).parent / "fixtures" / "storage.jsonl"
-test_book_prompt = ["book.py", "add", test_book.title, str(test_book.year), test_book.author]
+from tests.fixtures.fixtures import test_book, test_add_prompt, test_storage_path
 
 
 class TestAddBook(unittest.TestCase):
     def tearDown(self):
         Path.unlink(test_storage_path, missing_ok=True)
+    
+    def test_create_object_creates_object_correctly(self):
+        book = Book.create_object(test_book.title, test_book.year, test_book.author)
 
-    @patch("sys.argv", test_book_prompt)
-    def test_storage_file_created(self):
-        main(test_storage_path)
-        self.assertTrue(test_storage_path.exists())
+        self.assertIsInstance(book.id, str)
+        self.assertEqual(len(book.id), 4)
+        self.assertTrue(re.fullmatch(r"[A-Za-z0-9]*", book.id))
+        self.assertEqual(book.title, test_book.title)
+        self.assertEqual(book.year, test_book.year)
+        self.assertEqual(book.author, test_book.author)
+        self.assertEqual(book.status, test_book.status)
 
-    @patch("sys.argv", test_book_prompt)
-    def test_add_book_loads_data_correctly(self):
-        main(test_storage_path)
+    def test_book_load_loads_data_correctly(self):
+        test_book.load(test_storage_path)
         with open(test_storage_path, "r") as f:
             book = f.readline()
             book = json.loads(book)
+
+        self.assertEqual(book["id"], test_book.id)
         self.assertEqual(book["title"], test_book.title)
         self.assertEqual(book["year"], test_book.year)
         self.assertEqual(book["author"], test_book.author)
         self.assertEqual(book["status"], test_book.status.value)
 
-    @patch("sys.argv", test_book_prompt + ["-p"])
+    @patch("sys.argv", test_add_prompt + ["-p"])
     def test_add_book_prints_correct_message(self):
         import io
         import sys
@@ -44,13 +48,14 @@ class TestAddBook(unittest.TestCase):
         sys.stdout = captured_output
         main(test_storage_path)
         sys.stdout = sys.__stdout__
+
         self.assertEqual(
             captured_output.getvalue(),
             f"Added book: {test_book.title}, {test_book.year} by {test_book.author}\n"
         )
 
 
-class TestAddBookExceptions(unittest.TestCase):
+class TestBookLoadExceptions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         json_test_book = {
@@ -67,11 +72,13 @@ class TestAddBookExceptions(unittest.TestCase):
     def tearDownClass(cls):
         Path.unlink(test_storage_path, missing_ok=True)
 
-    def test_add_book_raises_collision_exc(self):
+    def test_book_load_raises_collision_exc(self):
         with self.assertRaises(CollisionException):
-            test_book.add(test_storage_path)
+            test_book.load(test_storage_path)
     
-    @patch("sys.argv", test_book_prompt)
-    def test_add_book_raises_book_already_exists_exc(self):
+    @patch("sys.argv", test_add_prompt)
+    def test_book_load_raises_book_already_exists_exc(self):
         with self.assertRaises(BookAlreadyExistsException):
-            main(test_storage_path)
+            test_book_2 = deepcopy(test_book)
+            test_book_2.id = "TeSt"
+            test_book_2.load(test_storage_path)
