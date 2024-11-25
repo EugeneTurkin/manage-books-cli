@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from typing import Final
 
 
 class Config:

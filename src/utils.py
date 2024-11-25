@@ -11,13 +11,12 @@ if TYPE_CHECKING:
 
 def table_print(books: list[dict[str, Any] | None]) -> None:
     """Print books in an improvized table representation."""
-
     print(
-        "||" + "id".center(8, "_") + 
+        "||" + "id".center(8, "_") +
         "||" + "title".center(50, "_") +
         "||" + "year".center(8, "_") +
         "||" + "author".center(50, "_") +
-        "||" + "status".center(20, "_") + "||"
+        "||" + "status".center(20, "_") + "||",
     )
     for book in books:
         print(
