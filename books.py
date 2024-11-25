@@ -5,11 +5,12 @@ from src.cli import parse_args
 from src.config import config
 from src.enums import Action
 from src.models import Book
+from src.utils import table_print
 
 
 def main(
     storage: Path = config.DATA_PATH,  # TODO: норм или нет?
-):
+) -> None:
     action = sys.argv[1]
     args = parse_args()
 
@@ -28,11 +29,18 @@ def main(
             print(f"Deleted book: {book.title}, {book.year} by {book.author}")
 
     if action == Action.SEARCH.value:
-        # return Book.search(args)
-        print([vars(args)])
+        items = vars(args).items()
+        for item in items:
+            if item[1]:
+                field, value = item
+        if books := Book.search(storage, field, value):
+            table_print(books)
+        else:
+            print("No books found")
 
     if action == Action.LIST.value:
-        Book.print_all(storage)
+        books = Book.get_all(storage)
+        table_print(books)
 
     if action == Action.STATUS.value:
         book = Book.get_by_id(storage, args.id)

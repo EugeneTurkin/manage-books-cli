@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 from dataclasses import dataclass
 from enum import Enum
 import json
@@ -7,7 +8,13 @@ import random
 import string
 
 from src.enums import BookStatus
-from src.exceptions import BookAlreadyExistsException, BookDoesNotExistException, CollisionException
+from src.exceptions import BookAlreadyExistsException, BookDoesNotExistException, CollisionException, InvalidStatusException
+
+
+if TYPE_CHECKING:
+    from io import TextIOWrapper
+    from pathlib import Path
+    from typing import Any
 
 
 @dataclass
@@ -19,7 +26,7 @@ class Book:
     id: str | None = None
     
     @property
-    def json(self):
+    def json(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "title": self.title,
@@ -29,43 +36,20 @@ class Book:
         }
 
     @classmethod
-    def search(cls, fields, storage):
-        items = vars(fields).items()
-        search_field = None
-        search_result = []
+    def create_object(cls, title: str, year: int, author: str) -> Book:
+        # we use simplistic approach to generating ids just for the sake of time efficency during examination
+        id = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(4)])
+        book = Book(title=title, year=year, author=author, id=id)
+        return book
 
-        for item in items:
-            if item[1]:
-                search_field = item
-        
+    @classmethod
+    def get_all(cls, storage: Path) -> list[dict[str, Any] | None]:
         with open(storage, "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                book = json.loads(line)
-                if book[search_field[0]] == search_field[1]:
-                    search_result.append(book)
-
-    @classmethod
-    def print_all(cls, storage):
-        with open(storage, "r") as f:  # TODO: просто загрузить файл в память и распечатать? или возможно через try/finally отдать генератор и закрыть файл в finally блоке? 
             books = [json.loads(line) for line in f.readlines()]
-        print("||" + "id".center(8, "_") + "||" + "title".center(50, "_") + "||" + "year".center(8, "_") + "||" + "author".center(50, "_") + "||" + "status".center(20, "_") + "||")
-        for book in books:
-            print("||" + f"{book['id'].center(8)}" + "||" + f"{book['title'].center(50)}" + "||" + f"{str(book['year']).center(8)}" + "||" + f"{book['author'].center(50)}" + "||" + f"{book['status'].center(20)}" + "||")
-    
-    def delete(self, storage):
-        with open(storage, "r+") as f:  # TODO: любое удаление строки из середины файла вызывает необходимость переписывать файл целиком?
-            lines = f.readlines()
-            f.seek(0)
-            for line in lines:
-                book = json.loads(line)
-                if book["id"] == self.id:
-                    continue
-                f.write(line)
-            f.truncate()
+        return books
 
     @classmethod
-    def get_by_id(cls, storage, id) -> Book:
+    def get_by_id(cls, storage: Path, id: str) -> Book:
         with open(storage, "r") as f:
             lines = f.readlines()
             for line in lines:
@@ -79,29 +63,47 @@ class Book:
                         status=BookStatus(book["status"]),
                     )
         raise BookDoesNotExistException
-    
-    def change_status(self, storage, status):
+
+    @classmethod
+    def search(cls, storage: Path, field: str, value: str | int) -> list[dict[str, Any] | None]:
+        results = []
+        with open(storage, "r") as f:
+            for line in f.readlines():
+                book = json.loads(line)
+                if (
+                    value == book[field]
+                    or (isinstance(value, str) and value in book[field])
+                ):
+                    results.append(book)
+        return results
+
+    def change_status(self, storage: Path, status: BookStatus) -> None:
         with open(storage, "r+") as f:
             lines = f.readlines()
             f.seek(0)
             for line in lines:
-                line = line.rstrip("\n")
+                book = json.loads(line)
+                if not book["id"] == self.id:
+                    f.write(line)
+                    continue
+                if book["status"] == status:
+                    raise InvalidStatusException
+                book["status"] = status
+                f.write(json.dumps(book) + "\n")
+            f.truncate()
+    
+    def delete(self, storage: Path) -> None:
+        with open(storage, "r+") as f:  # TODO: любое удаление строки из середины файла вызывает необходимость переписывать файл целиком?
+            lines = f.readlines()
+            f.seek(0)
+            for line in lines:
                 book = json.loads(line)
                 if book["id"] == self.id:
-                    book["status"] = status
-                    f.write(json.dumps(book) + "\n")
-                else:
-                    f.write(line + "\n")
+                    continue
+                f.write(line)
             f.truncate()
 
-    @classmethod
-    def create_object(cls, title, year, author):
-        # we use simplistic approach to generating ids just for the sake of time efficency during examination
-        id = ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(4)])
-        book = Book(title=title, year=year, author=author, id=id)
-        return book
-
-    def load(self, storage):
+    def load(self, storage: Path) -> None:
         with open(storage, "a+") as f:
             if self._id_exists(f):
                 raise CollisionException
@@ -109,7 +111,7 @@ class Book:
                 raise BookAlreadyExistsException
             f.write(json.dumps(self.json) + "\n")
     
-    def _book_exists(self, file):
+    def _book_exists(self, file: TextIOWrapper) -> bool:
         file.seek(0)
         lines = file.readlines()
         for line in lines:
@@ -122,7 +124,7 @@ class Book:
                 return True
         return False
 
-    def _id_exists(self, file):
+    def _id_exists(self, file: TextIOWrapper) -> bool:
         file.seek(0)
         lines = file.readlines()
         for line in lines:

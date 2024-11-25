@@ -3,7 +3,7 @@ from enum import Enum
 
 class Base(Enum):
     @classmethod
-    def values(cls):
+    def values(cls) -> list[str]:
         return [value.value for value in cls.__members__.values()]
 
 

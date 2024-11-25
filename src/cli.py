@@ -1,10 +1,17 @@
-import argparse
+from __future__ import annotations
+
+from argparse import ArgumentParser
+from typing import TYPE_CHECKING
 
 from src.enums import BookStatus
 
 
-def parse_args():
-    parser = argparse.ArgumentParser()
+if TYPE_CHECKING:
+    from argparse import Namespace
+
+
+def parse_args() -> Namespace:
+    parser = ArgumentParser()
     subparsers = parser.add_subparsers()
 
     parser_book_add = subparsers.add_parser("add", help="Add a new book")

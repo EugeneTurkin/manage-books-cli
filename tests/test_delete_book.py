@@ -13,15 +13,8 @@ from src.models import Book
 
 class TestDeleteBook(unittest.TestCase):
     def setUp(self):
-        json_test_book = {
-            "id": test_book.id,
-            "title": test_book.title,
-            "year": test_book.year,
-            "author": test_book.author,
-            "status": test_book.status.value,
-        }
         with open(test_storage_path, "w+") as f:
-            f.write(json.dumps(json_test_book) + "\n")
+            f.write(json.dumps(test_book.json) + "\n")
 
     def tearDown(self):
         Path.unlink(test_storage_path, missing_ok=True)
@@ -59,15 +52,10 @@ class TestDeleteBook(unittest.TestCase):
 class TestDeleteBookExceptions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        json_test_book = {
-            "id": "TeSt",
-            "title": test_book.title,
-            "year": test_book.year,
-            "author": test_book.author,
-            "status": test_book.status.value,
-        }
+        test_book_json = test_book.json
+        test_book_json["id"] = "TeSt"
         with open(test_storage_path, "w+") as f:
-            f.write(json.dumps(json_test_book) + "\n")
+            f.write(json.dumps(test_book_json) + "\n")
 
     @classmethod
     def tearDownClass(cls):

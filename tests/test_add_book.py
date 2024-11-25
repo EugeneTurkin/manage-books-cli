@@ -58,15 +58,8 @@ class TestAddBook(unittest.TestCase):
 class TestBookLoadExceptions(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        json_test_book = {
-            "id": test_book.id,
-            "title": test_book.title,
-            "year": test_book.year,
-            "author": test_book.author,
-            "status": test_book.status.value,
-        }
         with open(test_storage_path, "w+") as f:
-            f.write(json.dumps(json_test_book) + "\n")
+            f.write(json.dumps(test_book.json) + "\n")
 
     @classmethod
     def tearDownClass(cls):
